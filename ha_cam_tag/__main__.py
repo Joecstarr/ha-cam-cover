@@ -15,21 +15,17 @@ CONFIG_PATH = "/data/options.json"
 API_URL = "http://supervisor/core/api/"
 AUTH_TOKEN = os.environ['SUPERVISOR_TOKEN']
 DEBOUNCE_PERIOD = timedelta(seconds=5)
-TAG_ID_PATTERN = re.compile('https://www.home-assistant.io/tag/([0-9a-fA-F-]+)')
 
-def send_tag_event(tag_id, device_id):
-    endpoint = f"{API_URL}events/tag_scanned"
-    headers = {
-        "Authorization": f"Bearer {AUTH_TOKEN}"
-    }
-    data = {
-        "tag_id": tag_id,
-        "device_id": device_id
-    }
+
+def send_tag_event(state, entity_id):
+    endpoint = f"{API_URL}states/{entity_id}"
+    headers = {"Authorization": f"Bearer {AUTH_TOKEN}", "content-type": "application/json"}
+    data = {"state": state, "attributes": {"unit_of_measurement": "%"}}
     requests.post(endpoint, headers=headers, json=data)
 
+
 def main():
-    with open(CONFIG_PATH, 'r') as fh:
+    with open(CONFIG_PATH, "r") as fh:
         config = json.load(fh)
 
     exiting = False
@@ -38,15 +34,17 @@ def main():
 
     def detector_loop():
         detector = cv2.QRCodeDetector()
-        last_time, last_tag = None, None
         while not exiting:
             cv.wait()
+            percent = 100
             try:
-                if not exiting and (data := detector.detectAndDecode(frame)[0]) and (m := TAG_ID_PATTERN.match(data)):
-                    cur_time, tag_id = datetime.now(), m.group(1)
-                    if last_tag != tag_id or last_time < cur_time - DEBOUNCE_PERIOD:
-                        send_tag_event(tag_id, config['tag_event_device_id'])
-                        last_time, last_tag = cur_time, tag_id
+                if (
+                    not exiting
+                    and (data := detector.detectAndDecode(frame)[0])
+                    and (m := config["tag_match"].match(data))
+                ):
+                   percent = 0
+                send_tag_event(percent, config["entity_id"])
             except Exception as e:
                 logging.exception(e)
 
@@ -57,18 +55,19 @@ def main():
 
     try:
         while True:
-            stream = cv2.VideoCapture(config['camera_rtsp_stream'])
+            stream = cv2.VideoCapture(config["camera_rtsp_stream"])
             while stream.isOpened():
                 if (frame := stream.read()[1]) is not None:
                     cv.set()
             stream.release()
-            time.sleep(5)
+            time.sleep(config["loop_time"])
     except KeyboardInterrupt:
         exiting = True
         cv.set()
 
     detector_thread.join()
     return 0
+
 
 if __name__ == "__main__":
     main()

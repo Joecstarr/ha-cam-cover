@@ -11,8 +11,10 @@ arch:
   - armv7
   - i386
 options:
-  tag_event_device_id: "00000000000000000000000000000000"
+  entity_id: "cover.garagedoor"
   camera_rtsp_stream: "rtsp://camera-ip-address/"
+  loop_time: "5"
 schema:
-  tag_event_device_id: "match(^[a-zA-Z0-9]{32}$)"
+  entity_id: "match(^[a-zA-Z0-9\\.]{32}$)"
   camera_rtsp_stream: "match(^rtsp:\/\/.*)"
+  loop_time: "match([0-9]+)"
