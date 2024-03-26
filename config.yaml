@@ -1,7 +1,7 @@
-name: "Streaming Camera Tag Detection"
-description: "Detects QR codes in an IP camera stream and sends tag events to Home Assistant"
-version: "0.0.1"
-slug: "ha_cam_tag"
+name: "Streaming Camera Cover Detection"
+description: "Detects QR codes in an IP camera stream and sends Cover events to Home Assistant"
+version: "0.0.2"
+slug: "ha_cam_cover"
 init: false
 homeassistant_api: true
 arch:
@@ -11,8 +11,10 @@ arch:
   - armv7
   - i386
 options:
-  tag_event_device_id: "00000000000000000000000000000000"
-  camera_rtsp_stream: "rtsp://camera-ip-address/"
+  entity_id: "sensor.garage_door"
+  camera_rtsp_stream: "http://192.168.1.200/cgi-bin/jpeg.cgi"
+  loop_time: "30"
 schema:
-  tag_event_device_id: "match(^[a-zA-Z0-9]{32}$)"
-  camera_rtsp_stream: "match(^rtsp:\/\/.*)"
+  entity_id: "match(^[a-zA-Z]+\\.[a-zA-Z0-9_-]+$)"
+  camera_rtsp_stream: "match(^https{0,1}:\/\/.*)"
+  loop_time: "match([0-9]+)"
