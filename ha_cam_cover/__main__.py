@@ -9,6 +9,11 @@ import os
 import requests
 from datetime import datetime, timedelta
 
+from requests import post,get
+from pyzbar.pyzbar import decode
+from PIL import Image
+import io
+
 import cv2
 
 CONFIG_PATH = "/data/options.json"
@@ -29,29 +34,17 @@ def send_tag_event(state, entity_id):
 def main():
     with open(CONFIG_PATH, "r") as fh:
         config = json.load(fh)
-
-    exiting = False
-    frame = None
-    cv = threading.Event()
-
-
-
-    try:
-        detector = cv2.QRCodeDetector()
-        while True:
-            percent = 100
-            frame = requests.get(config["camera_rtsp_stream"]).content
-            if (
-                    not exiting
-                    and (data := detector.detectAndDecode(frame)[0])
-                    and (m := config["tag_match"].match(data))
-                ):
-                    percent = 0
-                    send_tag_event(percent, config["entity_id"])
-            log.debug("loop")
-            time.sleep(config["loop_time"])
-    except KeyboardInterrupt:
-        exiting = True
+    while True:
+        data = None
+        percent = 100
+        response = get(config["camera_rtsp_stream"])
+        img = Image.open(io.BytesIO(response.content))
+        data = decode(img)
+        if data != None and config["tag_match"].match(data):
+            percent = 0
+            send_tag_event(percent, config["entity_id"])
+        log.debug("loop")
+        time.sleep(config["loop_time"])
     return 0
 
 
